@@ -4,4 +4,6 @@ dist/
 .DS_Store
 .vite/
 client/.vite/
-
+.env
+.env.*
+!.env.example
