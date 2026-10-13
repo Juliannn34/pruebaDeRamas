@@ -24,14 +24,14 @@ function KPI({ label, value, icon: Icon, tone, hint, delay }) {
     red: { text: 'text-red-400', ring: 'border-red-500/25 bg-red-500/10 text-red-400' },
   }[tone];
   return (
-    <div className="card relative overflow-hidden p-6 animate-slide-up" style={{ animationDelay: `${delay}ms` }}>
+    <div className="card relative min-w-0 overflow-hidden p-5 sm:p-6 animate-slide-up" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-start justify-between">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{label}</p>
         <span className={`flex h-8 w-8 items-center justify-center rounded-lg border ${t.ring}`}>
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <p className={`mt-3 text-4xl font-extrabold tabular-nums ${t.text}`}>{value ?? '—'}</p>
+      <p className={`mt-3 text-3xl sm:text-4xl font-extrabold tabular-nums ${t.text}`}>{value ?? '—'}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>
     </div>
   );
@@ -104,16 +104,18 @@ export default function DashboardInicio() {
         <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</div>
       )}
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid min-w-0 gap-4 sm:grid-cols-2 md:grid-cols-3">
         <KPI label="Total Ingresos" value={resumen?.total} icon={LogIn} tone="white" hint="Intentos registrados hoy" delay={0} />
         <KPI label="Permitidos" value={resumen?.permitidos} icon={CheckCircle2} tone="green" hint={`${tasa}% de aprobación`} delay={60} />
-        <KPI label="Denegados" value={resumen?.denegados} icon={XCircle} tone="red" hint="Ficha, membresía o DNI" delay={120} />
+        <div className="sm:col-span-2 md:col-span-1">
+          <KPI label="Denegados" value={resumen?.denegados} icon={XCircle} tone="red" hint="Ficha, membresía o DNI" delay={120} />
+        </div>
       </section>
 
-      <section className="mt-5 grid gap-5 xl:grid-cols-3">
+      <section className="mt-5 grid min-w-0 gap-5 xl:grid-cols-3">
         {/* Actividad por hora */}
-        <div className="card p-6 xl:col-span-2">
-          <div className="flex items-center justify-between">
+        <div className="card min-w-0 overflow-hidden p-5 sm:p-6 xl:col-span-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-base font-bold">Afluencia por hora</h2>
               <p className="text-xs text-muted">Ingresos del día en el torniquete principal</p>
@@ -127,35 +129,37 @@ export default function DashboardInicio() {
               </span>
             </div>
           </div>
-          <div className="mt-6 flex h-44 items-end gap-1.5">
-            {horas.map((h) => (
-              <div key={h.hora} className="group relative flex h-full flex-1 flex-col items-center justify-end">
-                <div className="pointer-events-none absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-lg border border-line bg-ink-950 px-2.5 py-1.5 text-[11px] opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
-                  <b>{String(h.hora).padStart(2, '0')}:00</b> · {h.permitidos} ok · {h.denegados} den.
+          <div className="mt-6 overflow-x-auto pb-2 -mx-1 px-1">
+            <div className="flex h-44 min-w-[500px] items-end gap-1.5 sm:min-w-0">
+              {horas.map((h) => (
+                <div key={h.hora} className="group relative flex h-full flex-1 flex-col items-center justify-end">
+                  <div className="pointer-events-none absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-lg border border-line bg-ink-950 px-2.5 py-1.5 text-[11px] opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+                    <b>{String(h.hora).padStart(2, '0')}:00</b> · {h.permitidos} ok · {h.denegados} den.
+                  </div>
+                  <div className="flex w-full flex-col justify-end overflow-hidden rounded-md" style={{ height: `${(h.total / maxHora) * 100}%` }}>
+                    <div className="w-full bg-red-500/70" style={{ height: h.total ? `${(h.denegados / h.total) * 100}%` : 0 }} />
+                    <div className="w-full flex-1 bg-gradient-to-t from-brand to-brand-300 transition-all duration-500 group-hover:brightness-125" />
+                  </div>
+                  {h.total === 0 && (
+                    <div className={`h-1 w-full rounded-full ${h.hora === horaActual ? 'bg-brand/50' : 'bg-ink-700'}`} />
+                  )}
+                  <span className={`mt-2 text-[10px] tabular-nums ${h.hora === horaActual ? 'font-bold text-brand' : 'text-gray-600'}`}>
+                    {String(h.hora).padStart(2, '0')}
+                  </span>
                 </div>
-                <div className="flex w-full flex-col justify-end overflow-hidden rounded-md" style={{ height: `${(h.total / maxHora) * 100}%` }}>
-                  <div className="w-full bg-red-500/70" style={{ height: h.total ? `${(h.denegados / h.total) * 100}%` : 0 }} />
-                  <div className="w-full flex-1 bg-gradient-to-t from-brand to-brand-300 transition-all duration-500 group-hover:brightness-125" />
-                </div>
-                {h.total === 0 && (
-                  <div className={`h-1 w-full rounded-full ${h.hora === horaActual ? 'bg-brand/50' : 'bg-ink-700'}`} />
-                )}
-                <span className={`mt-2 text-[10px] tabular-nums ${h.hora === horaActual ? 'font-bold text-brand' : 'text-gray-600'}`}>
-                  {String(h.hora).padStart(2, '0')}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 
         {/* Tótem */}
-        <div className="card relative flex flex-col overflow-hidden p-6">
-          <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand/15 blur-3xl" />
+        <div className="card relative flex min-w-0 flex-col overflow-hidden p-5 sm:p-6">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand/15 blur-3xl" />
           <div className="relative flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-brand/30 bg-brand/10">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand/10">
               <MonitorSmartphone className="h-5 w-5 text-brand" />
             </span>
-            <div>
+            <div className="min-w-0">
               <h2 className="text-base font-bold">Tótem 01</h2>
               <p className="text-xs text-muted">Acceso principal · DNI</p>
             </div>
@@ -164,20 +168,20 @@ export default function DashboardInicio() {
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Motivos de rechazo hoy</p>
             {resumen?.motivos?.length ? (
               resumen.motivos.map((m) => (
-                <div key={m.motivo} className="flex items-center justify-between rounded-lg border border-line bg-ink-750/60 px-3 py-2 text-sm">
-                  <span className="text-gray-300">{m.motivo}</span>
-                  <span className="font-bold text-red-400">{m.total}</span>
+                <div key={m.motivo} className="flex items-center justify-between gap-2 rounded-lg border border-line bg-ink-750/60 px-3 py-2 text-sm">
+                  <span className="truncate text-gray-300">{m.motivo}</span>
+                  <span className="shrink-0 font-bold text-red-400">{m.total}</span>
                 </div>
               ))
             ) : (
               <p className="rounded-lg border border-dashed border-line px-3 py-3 text-center text-xs text-muted">Sin rechazos hoy 🎉</p>
             )}
           </div>
-          <div className="relative mt-auto flex gap-2 pt-5">
-            <a href="/terminal" target="_blank" rel="noopener noreferrer" className="btn-primary flex-1" id="btn-abrir-totem">
+          <div className="relative mt-auto flex flex-wrap sm:flex-nowrap gap-2 pt-5">
+            <a href="/terminal" target="_blank" rel="noopener noreferrer" className="btn-primary flex-1 whitespace-nowrap" id="btn-abrir-totem">
               Abrir Tótem <ExternalLink className="h-4 w-4" />
             </a>
-            <Link to="/admin/socios" className="btn-ghost" title="Ir a Socios">
+            <Link to="/admin/socios" className="btn-ghost shrink-0" title="Ir a Socios">
               <Users className="h-4 w-4" />
             </Link>
           </div>
@@ -185,10 +189,10 @@ export default function DashboardInicio() {
       </section>
 
       {/* Últimos ingresos */}
-      <section className="card mt-5 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-4">
+      <section className="card mt-5 min-w-0 overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div className="flex items-center gap-3">
-            <Activity className="h-4 w-4 text-brand" />
+            <Activity className="h-4 w-4 shrink-0 text-brand" />
             <h2 className="text-base font-bold">Últimos ingresos</h2>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-red-400">
               <Radio className="h-3 w-3 animate-pulse" /> En vivo
@@ -200,7 +204,7 @@ export default function DashboardInicio() {
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px]">
+          <table className="w-full min-w-[640px]">
             <thead className="bg-ink-850/50">
               <tr>
                 <th className="th">Hora</th>
