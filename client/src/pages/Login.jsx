@@ -15,7 +15,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && user) return <Navigate to="/admin/socios" replace />;
+  if (!loading && user) return <Navigate to="/admin/inicio" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +28,7 @@ export default function Login() {
     try {
       await login(correo.trim(), password);
       const from = location.state?.from;
-      navigate(from && from.startsWith('/admin') ? from : '/admin/socios', { replace: true });
+      navigate(from && from.startsWith('/admin') ? from : '/admin/inicio', { replace: true });
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo iniciar sesión'));
       setSubmitting(false);
