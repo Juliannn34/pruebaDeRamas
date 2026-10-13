@@ -12,6 +12,7 @@ export function AuthProvider({ children }) {
       const { data } = await api.get('/auth/me');
       setUser(data.user);
     } catch {
+      localStorage.removeItem('vortex_token');
       setUser(null);
     } finally {
       setLoading(false);
@@ -20,13 +21,19 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     refresh();
-    const onExpired = () => setUser(null);
+    const onExpired = () => {
+      localStorage.removeItem('vortex_token');
+      setUser(null);
+    };
     window.addEventListener('auth:expired', onExpired);
     return () => window.removeEventListener('auth:expired', onExpired);
   }, [refresh]);
 
   const login = useCallback(async (correo, password) => {
     const { data } = await api.post('/auth/login', { correo, password });
+    if (data.token) {
+      localStorage.setItem('vortex_token', data.token);
+    }
     setUser(data.user);
     return data.user;
   }, []);
@@ -35,6 +42,7 @@ export function AuthProvider({ children }) {
     try {
       await api.post('/auth/logout');
     } finally {
+      localStorage.removeItem('vortex_token');
       setUser(null);
     }
   }, []);

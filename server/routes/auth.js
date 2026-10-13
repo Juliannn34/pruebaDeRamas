@@ -67,6 +67,7 @@ router.post(
     res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: TOKEN_TTL_MS });
 
     return res.json({
+      token,
       user: { id: user.id, correo: user.correo, nombre: user.nombre, rol: user.rol },
     });
   })

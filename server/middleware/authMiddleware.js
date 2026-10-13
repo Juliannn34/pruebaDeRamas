@@ -7,7 +7,17 @@ const COOKIE_NAME = 'vortex_token';
  * Si es válido, adjunta el payload en req.user.
  */
 function authMiddleware(req, res, next) {
-  const token = req.cookies && req.cookies[COOKIE_NAME];
+  let token = null;
+
+  // 1. Prioridad: Header Authorization: Bearer <token>
+  // Fundamental para clientes cross-domain (ej. Vercel -> Render) donde navegadores móviles e incógnito bloquean third-party cookies.
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7).trim();
+  } else if (req.cookies && req.cookies[COOKIE_NAME]) {
+    // 2. Fallback: Cookie HTTP-Only
+    token = req.cookies[COOKIE_NAME];
+  }
 
   if (!token) {
     return res.status(401).json({ error: 'No autenticado' });

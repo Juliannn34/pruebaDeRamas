@@ -7,12 +7,22 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// Adjuntar automáticamente el token en Authorization header (indispensable para navegadores móviles e incógnito)
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('vortex_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Si una ruta protegida responde 401, avisamos a la app para cerrar sesión.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     const url = err.config?.url || '';
     if (err.response?.status === 401 && (url.startsWith('/admin') || url.startsWith('/acceso'))) {
+      localStorage.removeItem('vortex_token');
       window.dispatchEvent(new Event('auth:expired'));
     }
     return Promise.reject(err);
