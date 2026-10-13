@@ -10,6 +10,8 @@ import {
   MonitorSmartphone,
   ExternalLink,
   ChevronUp,
+  ChevronDown,
+  AlertTriangle,
   X,
 } from 'lucide-react';
 import { ClubBadge } from './Logo.jsx';
@@ -31,6 +33,11 @@ export default function Sidebar({ open, onClose }) {
   const toast = useToast();
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [terminalMenuOpen, setTerminalMenuOpen] = useState(false);
+  const [terminalActiva, setTerminalActiva] = useState(() => {
+    const saved = localStorage.getItem('hayya_terminal_activa');
+    return saved === 'true';
+  });
   const [loggingOut, setLoggingOut] = useState(false);
   const settingsRef = useRef(null);
 
@@ -41,6 +48,26 @@ export default function Sidebar({ open, onClose }) {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e.key || e.key === 'hayya_terminal_activa') {
+        const val = localStorage.getItem('hayya_terminal_activa');
+        setTerminalActiva(val === 'true');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const handleToggleTerminal = (e) => {
+    e.stopPropagation();
+    const next = !terminalActiva;
+    setTerminalActiva(next);
+    localStorage.setItem('hayya_terminal_activa', String(next));
+    window.dispatchEvent(new Event('storage'));
+    toast(next ? 'Terminal de acceso encendida' : 'Terminal de acceso apagada');
+  };
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -132,19 +159,87 @@ export default function Sidebar({ open, onClose }) {
             </button>
 
             {settingsOpen && (
-              <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border border-line bg-ink-800 p-1.5 shadow-2xl animate-scale-in">
-                <a
-                  id="link-abrir-totem"
-                  href="/terminal"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setSettingsOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-200 transition-colors hover:bg-brand/10 hover:text-white"
-                >
-                  <MonitorSmartphone className="h-4 w-4 text-brand" />
-                  <span>Abrir Tótem de Acceso</span>
-                  <ExternalLink className="ml-auto h-3.5 w-3.5 text-gray-500" />
-                </a>
+              <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-2xl border border-line bg-ink-850 p-2 shadow-2xl animate-scale-in">
+                {/* Apartado Terminal */}
+                <div className="rounded-xl border border-line/70 bg-ink-800/60 overflow-hidden">
+                  <button
+                    type="button"
+                    id="btn-apartado-terminal"
+                    onClick={() => setTerminalMenuOpen((v) => !v)}
+                    className="flex w-full items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-gray-200 transition-colors hover:bg-white/[0.04]"
+                    aria-expanded={terminalMenuOpen}
+                  >
+                    <MonitorSmartphone className="h-4 w-4 text-brand" />
+                    <span>Terminal</span>
+                    <span
+                      className={`ml-1.5 h-1.5 w-1.5 rounded-full ${
+                        terminalActiva ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'bg-red-400'
+                      }`}
+                    />
+                    <ChevronDown
+                      className={`ml-auto h-3.5 w-3.5 text-gray-400 transition-transform duration-200 ${
+                        terminalMenuOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {terminalMenuOpen && (
+                    <div className="border-t border-line/60 bg-ink-900/70 p-2.5 space-y-2.5 animate-fade-in">
+                      {/* Opción 1: Interruptor para encender / apagar */}
+                      <div className="flex items-center justify-between gap-2 px-1 pt-0.5">
+                        <div className="flex flex-col">
+                          <span className="text-[11px] uppercase tracking-wider text-muted">Estado</span>
+                          <span className={`text-xs font-bold ${terminalActiva ? 'text-emerald-400' : 'text-gray-400'}`}>
+                            {terminalActiva ? 'Encendida' : 'Apagada'}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          id="switch-terminal"
+                          role="switch"
+                          aria-checked={terminalActiva}
+                          onClick={handleToggleTerminal}
+                          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1 focus:ring-offset-ink-900 ${
+                            terminalActiva ? 'bg-brand' : 'bg-ink-700'
+                          }`}
+                          title={terminalActiva ? 'Apagar terminal' : 'Encender terminal'}
+                        >
+                          <span className="sr-only">Activar o desactivar terminal</span>
+                          <span
+                            aria-hidden="true"
+                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                              terminalActiva ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      {/* Mensaje de advertencia si la terminal está apagada */}
+                      {!terminalActiva && (
+                        <div
+                          role="alert"
+                          className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] leading-relaxed text-amber-300 animate-fade-in"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400 mt-0.5" />
+                          <span>La terminal no fue encendida. Activá el interruptor para habilitar ingresos.</span>
+                        </div>
+                      )}
+
+                      {/* Opción 2: Botón para abrir la nueva pestaña */}
+                      <a
+                        id="link-abrir-totem"
+                        href="/terminal"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-ink-800 px-3 py-2 text-xs font-semibold text-gray-200 transition-all hover:border-brand/40 hover:bg-brand/10 hover:text-white"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5 text-brand" />
+                        <span>Abrir en nueva pestaña</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

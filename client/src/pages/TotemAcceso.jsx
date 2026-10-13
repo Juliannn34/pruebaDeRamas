@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Delete, Check, Maximize, Minimize, ShieldCheck, ShieldX, ShieldAlert, Loader2, Trophy, HeartPulse, UserX, CircleSlash, LayoutGrid } from 'lucide-react';
+import { Delete, Check, Maximize, Minimize, ShieldCheck, ShieldX, ShieldAlert, Loader2, Trophy, HeartPulse, UserX, CircleSlash, LayoutGrid, PowerOff } from 'lucide-react';
 import api, { getErrorMessage } from '../api/axios';
 import { Emblem } from '../components/Logo.jsx';
 import { formatDni } from '../utils/format';
@@ -72,6 +72,10 @@ const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'ok'];
 
 export default function TotemAcceso() {
   const now = useClock();
+  const [terminalActiva, setTerminalActiva] = useState(() => {
+    const val = localStorage.getItem('hayya_terminal_activa');
+    return val === 'true';
+  });
   const [dni, setDni] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -90,6 +94,17 @@ export default function TotemAcceso() {
     };
   }, []);
 
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (!e.key || e.key === 'hayya_terminal_activa') {
+        const val = localStorage.getItem('hayya_terminal_activa');
+        setTerminalActiva(val === 'true');
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const reset = useCallback(() => {
     clearTimeout(timer.current);
     setResult(null);
@@ -98,6 +113,10 @@ export default function TotemAcceso() {
   }, []);
 
   const submit = useCallback(async () => {
+    if (!terminalActiva) {
+      setError('La terminal no fue encendida');
+      return;
+    }
     if (loading || result) return;
     if (dni.length < 6 || dni.length > MAX_LEN) {
       setError(`El DNI debe tener entre 6 y ${MAX_LEN} dígitos`);
@@ -114,10 +133,11 @@ export default function TotemAcceso() {
     } finally {
       setLoading(false);
     }
-  }, [dni, loading, result, reset]);
+  }, [dni, loading, result, reset, terminalActiva]);
 
   const press = useCallback(
     (k) => {
+      if (!terminalActiva) return;
       setPressed(k);
       setTimeout(() => setPressed(null), 120);
       if (result) {
@@ -130,12 +150,13 @@ export default function TotemAcceso() {
       else if (k === 'clear') setDni('');
       else setDni((d) => (d.length < MAX_LEN ? d + k : d));
     },
-    [result, reset, submit]
+    [result, reset, submit, terminalActiva]
   );
 
   // Teclado físico y portapapeles
   useEffect(() => {
     const onKey = (e) => {
+      if (!terminalActiva) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (/^\d$/.test(e.key)) press(e.key);
       else if (e.key === 'Backspace') press('del');
@@ -146,6 +167,7 @@ export default function TotemAcceso() {
     };
 
     const onPaste = (e) => {
+      if (!terminalActiva) return;
       const text = e.clipboardData?.getData('text') || '';
       const digits = text.replace(/\D/g, '').slice(0, MAX_LEN);
       if (digits) {
@@ -160,7 +182,7 @@ export default function TotemAcceso() {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('paste', onPaste);
     };
-  }, [press]);
+  }, [press, terminalActiva]);
 
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen?.();
@@ -185,10 +207,17 @@ export default function TotemAcceso() {
             <p className="text-[9px] tracking-[0.4em] text-muted">FITNESS CLUB</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-[11px] font-bold tracking-wider text-emerald-400">
-          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-ring" />
-          TÓTEM 01 • ACCESO PRINCIPAL
-        </span>
+        {terminalActiva ? (
+          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-[11px] font-bold tracking-wider text-emerald-400">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse-ring" />
+            TÓTEM 01 • ACCESO PRINCIPAL
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-[11px] font-bold tracking-wider text-amber-400">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            TÓTEM 01 • FUERA DE LÍNEA
+          </span>
+        )}
         <div className="flex items-center gap-2">
           <Link
             to="/admin/inicio"
@@ -213,58 +242,90 @@ export default function TotemAcceso() {
           </p>
         </div>
 
-        <div className="w-full max-w-md">
-          <h1 className="text-center text-2xl font-bold">Ingresá tu DNI</h1>
-          <p className="mt-1 text-center text-sm text-muted">Usá el teclado en pantalla o tu teclado físico</p>
+        {!terminalActiva ? (
+          <div className="w-full max-w-md animate-scale-in">
+            <div className="rounded-3xl border border-line bg-ink-850/90 p-8 text-center backdrop-blur shadow-2xl">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-400 shadow-[0_0_40px_-10px_rgba(245,158,11,0.5)]">
+                <PowerOff className="h-10 w-10" />
+              </div>
 
-          {/* Display */}
-          <div
-            className={`mt-6 flex h-20 items-center justify-center rounded-2xl border-2 bg-ink-800/80 px-6 backdrop-blur transition-colors ${
-              error ? 'border-red-500/60 animate-shake' : dni ? 'border-brand/60 shadow-glow' : 'border-line'
-            }`}
-            aria-live="polite"
-          >
-            {dni ? (
-              <span className="font-mono text-4xl font-semibold tracking-[0.12em]">{formatDni(dni)}</span>
-            ) : (
-              <span className="font-mono text-3xl tracking-[0.2em] text-gray-700">__.___.___</span>
-            )}
-            {!loading && <span className="ml-1 h-9 w-0.5 animate-pulse bg-brand" />}
-          </div>
-          <p className={`mt-2 h-5 text-center text-sm text-red-400 transition-opacity ${error ? 'opacity-100' : 'opacity-0'}`}>{error}</p>
+              <span className="mt-5 inline-block rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                Terminal Apagada
+              </span>
 
-          {/* Keypad */}
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            {KEYS.map((k) => {
-              const isOk = k === 'ok';
-              const isDel = k === 'del';
-              return (
-                <button
-                  key={k}
-                  id={`key-${k}`}
-                  onClick={() => press(k)}
-                  disabled={loading || (isOk && dni.length < 6)}
-                  className={`flex h-[72px] items-center justify-center rounded-2xl border text-2xl font-semibold transition-all duration-100 active:scale-95 disabled:opacity-40 ${
-                    isOk
-                      ? 'border-brand bg-gradient-to-b from-brand-400 to-brand text-white shadow-glow-sm hover:shadow-glow'
-                      : isDel
-                        ? 'border-line bg-ink-800 text-gray-400 hover:bg-ink-750 hover:text-white'
-                        : 'border-line bg-ink-800/90 hover:border-line-strong hover:bg-ink-750'
-                  } ${pressed === k ? 'scale-95 brightness-125' : ''}`}
-                  aria-label={isOk ? 'Ingresar' : isDel ? 'Borrar' : k}
-                >
-                  {isOk ? (
-                    loading ? <Loader2 className="h-7 w-7 animate-spin" /> : <Check className="h-7 w-7" strokeWidth={3} />
-                  ) : isDel ? (
-                    <Delete className="h-6 w-6" />
-                  ) : (
-                    k
-                  )}
-                </button>
-              );
-            })}
+              <h1 className="mt-3 text-2xl font-bold">La terminal no fue encendida</h1>
+              <p className="mt-2 text-sm text-muted">
+                El registro de accesos mediante DNI no está disponible porque la terminal se encuentra desactivada desde el Panel de Administración.
+              </p>
+
+              <div className="mt-6 rounded-2xl border border-line bg-ink-800/80 p-4 text-left text-xs text-gray-400 space-y-1.5">
+                <p className="font-semibold text-gray-200">¿Cómo encender la terminal?</p>
+                <p>1. Ingresá al Panel de Administración.</p>
+                <p>2. En el menú lateral, abrí <strong className="text-white">Ajustes &gt; Terminal</strong>.</p>
+                <p>3. Encendé el interruptor para habilitar el tótem.</p>
+              </div>
+
+              <div className="mt-6 flex flex-col gap-2.5">
+                <Link to="/admin/inicio" className="btn-primary w-full py-3 text-sm justify-center">
+                  <LayoutGrid className="h-4 w-4" /> Volver al Panel
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-full max-w-md">
+            <h1 className="text-center text-2xl font-bold">Ingresá tu DNI</h1>
+            <p className="mt-1 text-center text-sm text-muted">Usá el teclado en pantalla o tu teclado físico</p>
+
+            {/* Display */}
+            <div
+              className={`mt-6 flex h-20 items-center justify-center rounded-2xl border-2 bg-ink-800/80 px-6 backdrop-blur transition-colors ${
+                error ? 'border-red-500/60 animate-shake' : dni ? 'border-brand/60 shadow-glow' : 'border-line'
+              }`}
+              aria-live="polite"
+            >
+              {dni ? (
+                <span className="font-mono text-4xl font-semibold tracking-[0.12em]">{formatDni(dni)}</span>
+              ) : (
+                <span className="font-mono text-3xl tracking-[0.2em] text-gray-700">__.___.___</span>
+              )}
+              {!loading && <span className="ml-1 h-9 w-0.5 animate-pulse bg-brand" />}
+            </div>
+            <p className={`mt-2 h-5 text-center text-sm text-red-400 transition-opacity ${error ? 'opacity-100' : 'opacity-0'}`}>{error}</p>
+
+            {/* Keypad */}
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {KEYS.map((k) => {
+                const isOk = k === 'ok';
+                const isDel = k === 'del';
+                return (
+                  <button
+                    key={k}
+                    id={`key-${k}`}
+                    onClick={() => press(k)}
+                    disabled={loading || (isOk && dni.length < 6)}
+                    className={`flex h-[72px] items-center justify-center rounded-2xl border text-2xl font-semibold transition-all duration-100 active:scale-95 disabled:opacity-40 ${
+                      isOk
+                        ? 'border-brand bg-gradient-to-b from-brand-400 to-brand text-white shadow-glow-sm hover:shadow-glow'
+                        : isDel
+                          ? 'border-line bg-ink-800 text-gray-400 hover:bg-ink-750 hover:text-white'
+                          : 'border-line bg-ink-800/90 hover:border-line-strong hover:bg-ink-750'
+                    } ${pressed === k ? 'scale-95 brightness-125' : ''}`}
+                    aria-label={isOk ? 'Ingresar' : isDel ? 'Borrar' : k}
+                  >
+                    {isOk ? (
+                      loading ? <Loader2 className="h-7 w-7 animate-spin" /> : <Check className="h-7 w-7" strokeWidth={3} />
+                    ) : isDel ? (
+                      <Delete className="h-6 w-6" />
+                    ) : (
+                      k
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Resultado */}
